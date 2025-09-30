@@ -159,7 +159,7 @@ static void pwm_configure(nrfx_pwm_t const * p_instance, nrfx_pwm_config_t const
 
     nrfy_pwm_periph_configure(p_instance->p_reg, &nrfy_config);
     uint32_t to_clear = NRF_PWM_EVENT_LOOPSDONE | NRF_PWM_EVENT_SEQEND0 |
-                        NRF_PWM_EVENT_SEQEND1 | NRF_PWM_EVENT_STOPPED;
+                        NRF_PWM_EVENT_SEQEND1 | NRF_PWM_EVENT_STOPPED | NRF_PWM_EVENT_PWMPERIODEND;
     nrfy_pwm_int_init(p_instance->p_reg, to_clear, p_config->irq_priority, false);
 
 #if NRF_PWM_HAS_IDLEOUT
@@ -316,6 +316,10 @@ static uint32_t start_playback(nrfx_pwm_t const *    p_instance,
         if (flags & NRFX_PWM_FLAG_NO_EVT_FINISHED)
         {
             int_mask &= (uint32_t)~NRF_PWM_INT_LOOPSDONE_MASK;
+        }
+        if (flags & NRFX_PWM_FLAG_PWMPERIODEND)
+        {
+            int_mask |= NRF_PWM_INT_PWMPERIODEND_MASK;
         }
 
         nrfy_pwm_int_set(p_instance->p_reg, int_mask);
@@ -488,10 +492,12 @@ static void irq_handler(NRF_PWM_Type * p_pwm, pwm_control_block_t * p_cb)
                                                 NRFY_EVENT_TO_INT_BITMASK(NRF_PWM_EVENT_SEQEND0)   |
                                                 NRFY_EVENT_TO_INT_BITMASK(NRF_PWM_EVENT_SEQEND1)   |
                                                 NRFY_EVENT_TO_INT_BITMASK(NRF_PWM_EVENT_LOOPSDONE) |
-                                                NRFY_EVENT_TO_INT_BITMASK(NRF_PWM_EVENT_STOPPED));
+                                                NRFY_EVENT_TO_INT_BITMASK(NRF_PWM_EVENT_STOPPED)   |
+                                                NRFY_EVENT_TO_INT_BITMASK(NRF_PWM_EVENT_PWMPERIODEND));
 
-    // The user handler is called for SEQEND0 and SEQEND1 events only when the
-    // user asks for it (by setting proper flags when starting the playback).
+    // The user handler is called for SEQEND0, SEQEND1, and PWMPERIODEND events
+    // only when the user asks for it (by setting proper flags when starting
+    // the playback).
     if (evt_mask & NRFY_EVENT_TO_INT_BITMASK(NRF_PWM_EVENT_SEQEND0))
     {
         if ((p_cb->flags & NRFX_PWM_FLAG_SIGNAL_END_SEQ0) && p_cb->handler)
@@ -506,6 +512,14 @@ static void irq_handler(NRF_PWM_Type * p_pwm, pwm_control_block_t * p_cb)
             p_cb->handler(NRFX_PWM_EVT_END_SEQ1, p_cb->p_context);
         }
     }
+    if (evt_mask & NRFY_EVENT_TO_INT_BITMASK(NRF_PWM_EVENT_PWMPERIODEND))
+    {
+        if ((p_cb->flags & NRFX_PWM_FLAG_PWMPERIODEND) && p_cb->handler)
+        {
+            p_cb->handler(NRFX_PWM_EVT_PWMPERIODEND, p_cb->p_context);
+        }
+    }
+
     // For LOOPSDONE the handler is called by default, but the user can disable
     // this (via flags).
     if (evt_mask & NRFY_EVENT_TO_INT_BITMASK(NRF_PWM_EVENT_LOOPSDONE))

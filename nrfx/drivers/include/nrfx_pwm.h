@@ -173,6 +173,8 @@ typedef enum
     NRFX_PWM_FLAG_NO_EVT_FINISHED = 0x10, /**< The playback finished event
                                                (enabled by default) is to be
                                                suppressed. */
+    NRFX_PWM_FLAG_PWMPERIODEND = 0x20,    /**< The event handler is to be called
+                                               when the PWM period ends. */
     NRFX_PWM_FLAG_START_VIA_TASK = 0x80, /**< The playback must not be
                                               started directly by the called
                                               function. Instead, the function
@@ -191,6 +193,7 @@ typedef enum
     NRFX_PWM_EVT_END_SEQ1, /**< End of sequence 1 reached. Its data can be
                                 safely modified now. */
     NRFX_PWM_EVT_STOPPED,  ///< The PWM peripheral has been stopped.
+    NRFX_PWM_EVT_PWMPERIODEND, ///< End of a PWM period.
 } nrfx_pwm_evt_type_t;
 
 /** @brief PWM driver event handler type. */
